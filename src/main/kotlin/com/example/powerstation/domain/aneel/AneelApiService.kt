@@ -2,6 +2,7 @@ package com.example.powerstation.domain.aneel
 
 import com.example.powerstation.domain.station.PowerStation
 import com.example.powerstation.domain.station.PowerStationRepository
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForObject
@@ -13,6 +14,7 @@ class AneelApiService(
     private val powerStationRepository: PowerStationRepository
 ) {
 
+    @Scheduled(fixedRate = 600000) 
     fun getPowerStationsFromAneelAndSave(): List<PowerStation> {
         val records = getRecordsWithDetails()
 
@@ -29,8 +31,8 @@ class AneelApiService(
                     ideNucleoCEG = record.IdeNucleoCEG,
                     sigTipoGeracao = record.SigTipoGeracao,
                     nomEmpreendimento = record.NomEmpreendimento,
-                    mdaPotenciaOutorgadaKw = record.MdaPotenciaOutorgadaKw,
-                    mdaTensaoConexao = record.MdaTensaoConexao,
+                    mdaPotenciaOutorgadaKw = record.MdaPotenciaOutorgadaKw?.replace(",", ".") ?: "",
+                    mdaTensaoConexao = record.MdaTensaoConexao?.replace(",", ".") ?: "",
                     nomEmpresaConexao = record.NomEmpresaConexao,
                     numCnpjEmpresaConexao = record.NumCnpjEmpresaConexao
                 )
@@ -46,9 +48,11 @@ class AneelApiService(
         return newPowerStations
     }
 
+
+
     fun getRecordsWithDetails(): List<AneelRecord> {
         val url = "https://dadosabertos.aneel.gov.br/api/3/action/datastore_search" +
-                "?resource_id=4a615df8-4c25-48fa-bbea-873a36a79518&limit=6"
+                "?resource_id=4a615df8-4c25-48fa-bbea-873a36a79518&limit=100"
 
         return restTemplate.getForObject<AneelApiResponse>(url)?.result?.records ?: emptyList()
     }

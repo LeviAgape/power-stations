@@ -1,5 +1,6 @@
 package com.example.powerstation.domain.station
 
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import java.util.*
@@ -10,12 +11,12 @@ class PowerStationService(
     private val restTemplate: RestTemplate,
 
     ) {
-    fun getPowerStations(): List<PowerStation> {
-        val getPowerSations = powerStationRepository.findAll();
-        return getPowerSations
+    fun getTop5PowerStations(): List<PowerStation> {
+        return powerStationRepository.findTop5ByOrderByPotenciaOutorgadaDesc(PageRequest.of(0, 5))
     }
 
     fun addPowerStation(request: PostPowerStationRequest): PowerStation {
+
         val powerStation = PowerStation(
             id = UUID.randomUUID().toString(),
             idPowerStationAneel = request.idPowerStationAneel,

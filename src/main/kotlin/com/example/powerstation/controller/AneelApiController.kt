@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/aneel")
 class AneelApiController(private val aneelApiService: AneelApiService) {
 
-    @GetMapping("/load-csv")
+    @GetMapping("/load/csv")
     fun getCvs(): ResponseEntity<List<PowerStation>> {
         val getCvs = aneelApiService.getPowerStationsFromAneelAndSave()
         return ResponseEntity.ok(getCvs)

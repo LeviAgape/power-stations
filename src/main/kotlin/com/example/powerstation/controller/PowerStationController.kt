@@ -15,10 +15,9 @@ import java.util.*
 @RequestMapping("/station")
 class PowerStationController(private val powerStationService: PowerStationService) {
 
-    @GetMapping
-    fun getStations(): List<PowerStation>{
-        val getStations = powerStationService.getPowerStations()
-        return getStations
+    @GetMapping("/top5")
+    fun getTop5Stations(): List<PowerStation> {
+        return powerStationService.getTop5PowerStations()
     }
 
     @PostMapping
