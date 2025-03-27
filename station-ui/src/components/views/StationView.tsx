@@ -4,48 +4,60 @@ import {
   Box,
   Button,
   Typography,
-  Modal,
   MenuItem,
   Select,
   FormControl,
   InputLabel,
   SelectChangeEvent,
+  Modal,
 } from "@mui/material";
 import axios from "axios";
 import { RequestPowerStation } from "../station-utills/station-utills";
 import { TableHeaders } from "../station-utills/station-headers";
 import { statesOfBrazil } from "../station-utills/station-states-brazil";
-import { formatCNPJ } from "../station-utills/station-cnpj-mask"; 
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface StationViewProps {
   station: RequestPowerStation;
   closeModal: () => void;
   refreshData: () => void;
+  openSnackbar: boolean;
+  setOpenSnackbar: React.Dispatch<React.SetStateAction<boolean>>;
+  setSnackbarMessage: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export const StationView = ({
   station,
   closeModal,
   refreshData,
+  setOpenSnackbar,
+  setSnackbarMessage,
 }: StationViewProps) => {
   const [formData, setFormData] = useState<RequestPowerStation>(station);
+  const [isCnpjValid, setIsCnpjValid] = useState<boolean>(
+    station.numCnpjEmpresaConexao?.replace(/\D/g, "").length === 14
+  );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    const field = TableHeaders.find((item) => item.key === name);
 
-    if (name === "cnpj") {
-      const cleanedValue = value.replace(/\D/g, ""); 
-      
-      setFormData((prevData) => ({
-        ...prevData,
-        [name]: formatCNPJ(cleanedValue), 
-      }));
-    } else {
-      setFormData((prevData) => ({
-        ...prevData,
-        [name]: value,
-      }));
+    let newValue = value;
+
+    if (field?.type === "numeric") {
+      newValue = value.replace(/\D/g, "");
+    } else if (field?.type === "letters") {
+      newValue = value.replace(/[^A-Za-z]/g, "");
+    } else if (field?.type === "cnpj") {
+      newValue = value.replace(/\D/g, ""); 
+      setIsCnpjValid(newValue.length === 14);
     }
+
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: newValue,
+    }));
   };
 
   const handleStateChange = (e: SelectChangeEvent<string>) => {
@@ -57,14 +69,17 @@ export const StationView = ({
 
   const handleSave = () => {
     axios
-      .put(`http://localhost:8080/station/${formData.id}`, formData)
-      .then((response) => {
-        console.log("Usina atualizada com sucesso", response.data);
+      .put(`${API_URL}/station/${formData.id}`, formData)
+      .then(() => {
         closeModal();
         refreshData();
+        setSnackbarMessage("Usina editada com sucesso!");
+        setOpenSnackbar(true);
       })
       .catch((error) => {
         console.error("Erro ao salvar os dados:", error);
+        setSnackbarMessage("Erro ao salvar a usina.");
+        setOpenSnackbar(true);
       });
   };
 
@@ -86,67 +101,78 @@ export const StationView = ({
           Detalhes da Usina
         </Typography>
 
-        {TableHeaders.map(({ name, key }) => {
-          if (key === "idPowerStationAneel") {
-            return (
-              <TextField
-                key={key}
+        {TableHeaders.map(({ name, key, type }) =>
+          key === "sigUFPrincipal" ? (
+            <FormControl fullWidth margin="normal" key={key}>
+              <InputLabel>UF</InputLabel>
+              <Select
+                value={formData.sigUFPrincipal ?? ""}
+                onChange={handleStateChange}
                 label={name}
                 name={key}
-                value={formData[key as keyof RequestPowerStation] ?? ""}
-                fullWidth
-                margin="normal"
-                disabled
-              />
-            );
-          } else if (key === "sigUFPrincipal") {
-            return (
-              <FormControl fullWidth margin="normal" key={key}>
-                <InputLabel>UF</InputLabel>
-                <Select
-                  value={formData.sigUFPrincipal ?? ""}
-                  onChange={handleStateChange}
-                  key={key}
-                  label={name}
-                  name={key}
-                >
-                  {statesOfBrazil.map((state) => (
-                    <MenuItem key={state.value} value={state.value}>
-                      {state.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            );
-          } else if (key === "numCnpjEmpresaConexao") {
-            return (
-              <TextField
-                key={key}
-                label={name}
-                name={key}
-                value={formData[key as keyof RequestPowerStation] ?? ""}
-                onChange={handleInputChange}
-                fullWidth
-                margin="normal"
-                inputProps={{
-                  maxLength: 18,
-                }}
-              />
-            );
-          } else {
-            return (
-              <TextField
-                key={key}
-                label={name}
-                name={key}
-                value={formData[key as keyof RequestPowerStation] ?? ""}
-                onChange={handleInputChange}
-                fullWidth
-                margin="normal"
-              />
-            );
-          }
-        })}
+              >
+                {statesOfBrazil.map((state) => (
+                  <MenuItem key={state.value} value={state.value}>
+                    {state.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          ) : (
+            <TextField
+              key={key}
+              label={name}
+              name={key}
+              value={formData[key as keyof RequestPowerStation] ?? ""}
+              onChange={handleInputChange}
+              fullWidth
+              margin="normal"
+              inputProps={{
+                maxLength:
+                  type === "cnpj"
+                    ? 14
+                    : type === "letters" && key === "sigTipoGeracao"
+                    ? 3
+                    : undefined,
+                inputMode:
+                  type === "decimal" || type === "cnpj"
+                    ? "decimal"
+                    : type === "letters"
+                    ? "text"
+                    : "text",
+                pattern:
+                  type === "decimal" || type === "cnpj"
+                    ? "[0-9]*"
+                    : type === "letters"
+                    ? "[A-Za-z]*"
+                    : undefined,
+              }}
+              error={
+                key === "sigTipoGeracao" &&
+                typeof formData[key as keyof RequestPowerStation] ===
+                  "string" &&
+                formData[key as keyof RequestPowerStation]!.length > 3
+              }
+              helperText={
+                key === "sigTipoGeracao" &&
+                typeof formData[key as keyof RequestPowerStation] ===
+                  "string" &&
+                formData[key as keyof RequestPowerStation]!.length < 3
+                  ? "A sigla deve ter até 3 letras"
+                  : key === "numCnpjEmpresaConexao" && !isCnpjValid
+                  ? "O CNPJ deve conter 14 dígitos"
+                  : ""
+              }
+              disabled={type === "disabled"}
+              onInput={(e) => {
+                const target = e.target as HTMLInputElement;
+                if (key === "sigTipoGeracao" && target.value.length > 3) {
+                  e.preventDefault();
+                }
+              }}
+            />
+          )
+        )}
 
         <Box
           sx={{
@@ -158,7 +184,12 @@ export const StationView = ({
           <Button onClick={closeModal} variant="outlined" color="secondary">
             Cancelar
           </Button>
-          <Button onClick={handleSave} variant="contained" color="primary">
+          <Button
+            onClick={handleSave}
+            variant="contained"
+            color="primary"
+            disabled={!isCnpjValid}
+          >
             Salvar
           </Button>
         </Box>
