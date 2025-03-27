@@ -76,8 +76,8 @@ export const StationView = ({
         setSnackbarMessage("Usina editada com sucesso!");
         setOpenSnackbar(true);
       })
-      .catch((error) => {
-        console.error("Erro ao salvar os dados:", error);
+      .catch(() => {
+        console.error("Erro ao salvar os dados:");
         setSnackbarMessage("Erro ao salvar a usina.");
         setOpenSnackbar(true);
       });

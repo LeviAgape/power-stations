@@ -40,19 +40,12 @@ export const HomeView = () => {
 
   const fetchData = () => {
     axios
-      .get(`${API_URL}/station`)
+      .get(`${API_URL}/station/top5`)
       .then((response) => {
-        const sortedData = response.data.sort(
-          (a: PowerStation, b: PowerStation) => {
-            const idA = parseInt(a.idPowerStationAneel || "0", 10);
-            const idB = parseInt(b.idPowerStationAneel || "0", 10);
-            return idA - idB;
-          }
-        );
-        setData(sortedData);
+        setData(response.data);
       })
-      .catch((error) => {
-        console.error("Erro ao carregar os dados:", error);
+      .catch(() => {
+        console.error("Erro ao carregar os dados:");
       });
   };
 
@@ -86,8 +79,8 @@ export const HomeView = () => {
           setOpenSnackbar(true);
           fetchData();
         })
-        .catch((error) => {
-          console.error("Erro ao excluir a estação:", error);
+        .catch(() => {
+          console.error("Erro ao excluir a estação:");
           setSnackbarMessage("Erro ao excluir a estação.");
           setOpenSnackbar(true);
         });
@@ -165,14 +158,14 @@ export const HomeView = () => {
                         ? formatCNPJ(
                             item[header.key as keyof PowerStation] as string
                           )
+                        : header.key === "mdaPotenciaOutorgadaKw" &&
+                          item[header.key as keyof PowerStation]
+                        ? parseFloat(
+                            item[header.key as keyof PowerStation] as string
+                          ).toLocaleString("pt-BR")
                         : typeof item[header.key as keyof PowerStation] ===
-                            "string" &&
-                          item[header.key as keyof PowerStation] !== null &&
-                          item[header.key as keyof PowerStation]!.length > 40
-                        ? `${item[header.key as keyof PowerStation]?.slice(
-                            0,
-                            40
-                          )}...`
+                          "string"
+                        ? item[header.key as keyof PowerStation] ?? "Sem dados"
                         : item[header.key as keyof PowerStation] ?? "Sem dados"}
                     </TableCell>
                   ))}

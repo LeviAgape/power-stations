@@ -30,24 +30,19 @@ export const RegisterView = ({
   setSnackbarMessage,
 }: RegisterViewProps) => {
   const [formData, setFormData] = useState<RegisterPowerStation>({});
-  const [isCnpjValid, setIsCnpjValid] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false); 
+  const [modalOpen, setModalOpen] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-
     let newValue = value;
     const field = TableHeaders.find((item) => item.key === name);
 
     if (field?.type === "cnpj") {
       newValue = value.replace(/\D/g, ""); 
-      setIsCnpjValid(newValue.length === 14); 
     } else if (field?.type === "letters") {
       newValue = value.replace(/[^A-Za-z]/g, ""); 
     } else if (field?.type === "decimal") {
-      newValue = value
-        .replace(/[^0-9,]/g, "") 
-        .replace(/(,.*),/g, "$1"); 
+      newValue = value.replace(/[^0-9,]/g, "").replace(/(,.*),/g, "$1"); 
     }
 
     setFormData((prevData) => ({
@@ -77,18 +72,37 @@ export const RegisterView = ({
   };
 
   const handleSubmit = () => {
+    if (!formData.idPowerStationAneel) {
+      setSnackbarMessage("O ID da usina é obrigatório!");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    const formattedData = {
+      ...formData,
+      mdaPotenciaOutorgadaKw: (formData.mdaPotenciaOutorgadaKw ?? "").replace(
+        ",",
+        "."
+      ),
+      mdaTensaoConexao: (formData.mdaTensaoConexao ?? "").replace(",", "."),
+    };
+
     axios
-      .post(`${API_URL}/station`, formData)
+      .post(`${API_URL}/station`, formattedData)
       .then(() => {
-        refreshData(); 
+        refreshData();
         setSnackbarMessage("Usina criada com sucesso!");
         setOpenSnackbar(true);
-        setFormData(initialFormData); 
-        setModalOpen(false); 
+        setFormData(initialFormData);
+        setModalOpen(false);
       })
-      .catch((error) => {
-        console.error("Erro ao criar a usina:", error);
-        setSnackbarMessage("Erro ao criar a usina, tente outro Id");
+      .catch(() => {
+        console.error("Erro ao criar a usina:");
+        if (error.response?.status === 409) {
+          setSnackbarMessage("ID já existe!");
+        } else {
+          setSnackbarMessage("Erro ao criar a usina.");
+        }
         setOpenSnackbar(true);
       });
   };
@@ -99,13 +113,25 @@ export const RegisterView = ({
   };
 
   return (
-    <>
+    <Box
+      sx={{
+        paddingTop: "14px", 
+      }}
+    >
       <Button
         variant="contained"
         color="primary"
         onClick={() => setModalOpen(true)}
+        sx={{
+          borderRadius: "20px", 
+          backgroundColor: "#f0f0f0", 
+          color: "#000", 
+          "&:hover": {
+            backgroundColor: "#e0e0e0",
+          },
+        }}
       >
-        Criar Usina
+        Criar Usinas
       </Button>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)}>
@@ -142,20 +168,6 @@ export const RegisterView = ({
                   ))}
                 </Select>
               </FormControl>
-            ) : key === "mdaPotenciaOutorgadaKw" ||
-              key === "mdaTensaoConexao" ? (
-              <TextField
-                key={key}
-                label={name}
-                name={key}
-                value={formData[key as keyof RegisterPowerStation] ?? ""}
-                onChange={handleInputChange}
-                fullWidth
-                margin="normal"
-                inputProps={{
-                  inputMode: "decimal",
-                }}
-              />
             ) : (
               <TextField
                 key={key}
@@ -189,8 +201,6 @@ export const RegisterView = ({
                   typeof formData[key] === "string" &&
                   formData[key]!.length < 3
                     ? "A sigla deve ter até 3 letras"
-                    : key === "numCnpjEmpresaConexao" && !isCnpjValid
-                    ? "O CNPJ deve conter 14 dígitos"
                     : ""
                 }
               />
@@ -207,17 +217,12 @@ export const RegisterView = ({
             <Button variant="outlined" color="secondary" onClick={handleCancel}>
               Cancelar
             </Button>
-            <Button
-              onClick={handleSubmit}
-              variant="contained"
-              color="primary"
-              disabled={!isCnpjValid}
-            >
+            <Button onClick={handleSubmit} variant="contained" color="primary">
               Criar Usina
             </Button>
           </Box>
         </Box>
       </Modal>
-    </>
+    </Box>
   );
 };
