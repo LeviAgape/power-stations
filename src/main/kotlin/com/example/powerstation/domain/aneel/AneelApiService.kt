@@ -48,7 +48,7 @@ class AneelApiService(
 
     fun getRecordsWithDetails(): List<AneelRecord> {
         val url = "https://dadosabertos.aneel.gov.br/api/3/action/datastore_search" +
-                "?resource_id=4a615df8-4c25-48fa-bbea-873a36a79518&limit=4"
+                "?resource_id=4a615df8-4c25-48fa-bbea-873a36a79518&limit=6"
 
         return restTemplate.getForObject<AneelApiResponse>(url)?.result?.records ?: emptyList()
     }
