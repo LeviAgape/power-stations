@@ -14,7 +14,7 @@ class AneelApiService(
     private val powerStationRepository: PowerStationRepository
 ) {
 
-    @Scheduled(fixedRate = 600000) 
+    @Scheduled(initialDelay = 2000, fixedRate = 600000)
     fun getPowerStationsFromAneelAndSave(): List<PowerStation> {
         val records = getRecordsWithDetails()
 
